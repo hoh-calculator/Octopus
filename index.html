@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>副本光環疊加模擬器 Pro</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent-color: #38bdf8;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --grid-border: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px;
+      gap: 30px;
+      min-height: 100vh;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel h2 { font-size: 20px; color: var(--accent-color); border-bottom: 2px solid #334155; padding-bottom: 8px; }
+    .panel p { font-size: 13px; color: var(--text-sub); line-height: 1.5; }
+
+    .switch-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #475569; transition: .3s; border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background-color: white; transition: .3s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent-color); }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .btn-danger {
+      background: #ef4444; color: white; border: none; padding: 10px;
+      border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-danger:hover { background: #dc2626; }
+
+    .player-list-title { font-size: 14px; font-weight: bold; color: var(--text-sub); }
+    #player-list { list-style: none; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    #player-list li {
+      background: #0f172a; padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .btn-remove { background: #475569; color: #fff; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+    .btn-remove:hover { background: #ef4444; }
+
+    .board-card {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(15, 22px);
+      gap: 1px;
+      background-color: var(--grid-border);
+      border: 2px solid var(--grid-border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .cell {
+      width: 22px;
+      height: 22px;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.15s;
+    }
+
+    .cell.empty-space { background: transparent; cursor: default; }
+    .cell.playable { background-color: #1e293b; }
+    .cell.playable:hover { filter: brightness(1.3); }
+
+    /* 各光環層數顏色 */
+    .cell.aura-1 { background-color: #ea580c; color: #fff; }
+    .cell.aura-2 { background-color: #d97706; color: #fff; }
+    .cell.aura-3 { background-color: #ca8a04; color: #fff; }
+    .cell.aura-4 { background-color: #65a30d; color: #fff; }
+    .cell.aura-5 { background-color: #0d9488; color: #fff; }
+    .cell.aura-6 { background-color: #0284c7; color: #fff; }
+    .cell.aura-7 { background-color: #4338ca; color: #fff; }
+    .cell.aura-8 { background-color: #7d21a2; color: #fff; }
+    .cell.aura-max { background-color: #be123c; color: #fff; }
+
+    .cell.player {
+      background-color: #facc15 !important;
+      color: #000 !important;
+      box-shadow: inset 0 0 0 2px #000;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+
+<div class="panel">
+  <h2>🎮 隊伍佈局控制</h2>
+  <p>點擊右側棋盤可放置或移除角色。系統將自動計算光環覆蓋與層數。</p>
+  
+  <div class="switch-container">
+    <span>顯示光環層數數字</span>
+    <label class="switch">
+      <input type="checkbox" id="toggle-numbers" checked onchange="updateRender()">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <button class="btn-danger" onclick="clearAll()">清空所有隊員</button>
+
+  <div style="border-top: 1px solid #334155; margin-top: 5px; padding-top: 10px;">
+    <div class="player-list-title">已放置角色：</div>
+    <ul id="player-list" style="margin-top: 8px;"></ul>
+  </div>
+</div>
+
+<div class="board-card">
+  <div id="board" class="grid"></div>
+</div>
+
+<script>
+const MAP_LAYOUT = [
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
+
+  [1,1,1,1, 0,0,0,0,0,0,0, 1,1,1,1],
+  [1,1,1,1, 0,0,0,0,0,0,0, 1,1,1,1],
+  [1,1,1,1, 0,0,0,0,0,0,0, 1,1,1,1],
+  [1,1,1,1, 0,0,0,0,0,0,0, 1,1,1,1],
+  [1,1,1,1, 0,0,0,0,0,0,0, 1,1,1,1],
+  [1,1,1,1, 0,0,0,0,0,0,0, 1,1,1,1],
+  [1,1,1,1, 0,0,0,0,0,0,0, 1,1,1,1],
+
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
+  [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0]
+];
+
+const ROWS = MAP_LAYOUT.length;
+const COLS = MAP_LAYOUT[0].length;
+
+// 精確光環形狀：9x9 扣除 4 角，加 4 邊外凸 1 格
+const AURA_SHAPE = [];
+for (let r = -5; r <= 5; r++) {
+  for (let c = -5; c <= 5; c++) {
+    const absR = Math.abs(r);
+    const absC = Math.abs(c);
+
+    if ((absR === 5 && absC === 0) || (absC === 5 && absR === 0)) {
+      AURA_SHAPE.push([r, c]);
+    } else if (absR <= 4 && absC <= 4) {
+      if (!(absR === 4 && absC === 4)) {
+        AURA_SHAPE.push([r, c]);
+      }
+    }
+  }
+}
+
+let players = [];
+
+function initBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      
+      if (MAP_LAYOUT[r][c] === 1) {
+        cell.className = 'cell playable';
+        cell.onclick = () => handleCellClick(r, c);
+      } else {
+        cell.className = 'cell empty-space';
+      }
+      board.appendChild(cell);
+    }
+  }
+}
+
+function handleCellClick(r, c) {
+  const existingIdx = players.findIndex(p => p.r === r && p.c === c);
+  if (existingIdx !== -1) {
+    players.splice(existingIdx, 1);
+  } else {
+    players.push({ r, c, id: Date.now() });
+  }
+  updateRender();
+}
+
+function removePlayer(id) {
+  players = players.filter(p => p.id !== id);
+  updateRender();
+}
+
+function clearAll() {
+  players = [];
+  updateRender();
+}
+
+function updateRender() {
+  const showNumbers = document.getElementById('toggle-numbers').checked;
+
+  // 清除可遊玩格子的狀態，保留基本 playable 類別
+  document.querySelectorAll('.cell.playable').forEach(cell => {
+    cell.className = 'cell playable';
+    cell.innerText = '';
+  });
+
+  const auraMap = {};
+
+  // 計算每個格子的光環疊加次數
+  players.forEach(p => {
+    AURA_SHAPE.forEach(([dr, dc]) => {
+      const targetR = p.r + dr;
+      const targetC = p.c + dc;
+
+      if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
+        if (MAP_LAYOUT[targetR][targetC] === 1) {
+          const key = `${targetR}_${targetC}`;
+          auraMap[key] = (auraMap[key] || 0) + 1;
+        }
+      }
+    });
+  });
+
+  // 繪製光環覆蓋層
+  Object.keys(auraMap).forEach(key => {
+    const [r, c] = key.split('_');
+    const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+    const count = auraMap[key];
+
+    if (cell) {
+      const classLevel = count > 8 ? 'max' : count;
+      cell.classList.add(`aura-${classLevel}`);
+      if (showNumbers) {
+        cell.innerText = count;
+      }
+    }
+  });
+
+  // 繪製角色位置 (蓋在光環上)
+  players.forEach((p, index) => {
+    const cell = document.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
+    if (cell) {
+      cell.classList.add('player');
+      cell.innerText = `P${index + 1}`;
+    }
+  });
+
+  // 更新左側列表
+  const list = document.getElementById('player-list');
+  list.innerHTML = '';
+  players.forEach((p, index) => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span><b>P${index + 1}</b> - (${p.r + 1}, ${p.c + 1})</span>
+      <button class="btn-remove" onclick="removePlayer(${p.id})">移除</button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+initBoard();
+</script>
+</body>
+</html>
