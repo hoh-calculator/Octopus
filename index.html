@@ -2,205 +2,136 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>副本光環模擬器 Ultimate</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>副本光環模擬器 Final</title>
   <style>
     :root {
       --bg-color: #0f172a;
       --card-bg: #1e293b;
       --accent-color: #38bdf8;
       --text-main: #f8fafc;
-      --text-sub: #94a3b8;
       --grid-border: #334155;
-      /* 電腦預設格子大小 */
-      --cell-size: 38px;
+      --cell-size: 36px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-main);
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: 16px;
       gap: 16px;
       min-height: 100vh;
     }
 
-    /* 頂部控制面板 */
     .panel {
       width: 100%;
-      max-width: 650px;
-      background: var(--card-bg);
-      padding: 16px 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .panel h2 { font-size: 20px; color: var(--accent-color); }
-
-    .controls {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: space-between;
-      background: #0f172a;
-      padding: 10px 16px;
-      border-radius: 8px;
-    }
-
-    .switch-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-    }
-    .switch { position: relative; display: inline-block; width: 42px; height: 22px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #475569; transition: .3s; border-radius: 22px;
-    }
-    .slider:before {
-      position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
-      background-color: white; transition: .3s; border-radius: 50%;
-    }
-    input:checked + .slider { background-color: var(--accent-color); }
-    input:checked + .slider:before { transform: translateX(20px); }
-
-    .btn-danger {
-      background: #ef4444; color: white; border: none; padding: 8px 14px;
-      border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-danger:hover { background: #dc2626; }
-
-    #player-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .player-tag {
-      background: #0f172a;
-      border: 1px solid var(--accent-color);
-      color: #fff;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .player-tag .close {
-      color: #ef4444; font-weight: bold; cursor: pointer;
-    }
-
-    /* 外層卡片：電腦置中、手機充許滑動 */
-    .board-card {
-      width: 100%;
-      max-width: fit-content;
+      max-width: 600px;
       background: var(--card-bg);
       padding: 16px;
       border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+
+    .btn-danger {
+      background: #ef4444; color: white; border: none; padding: 8px 12px;
+      border-radius: 6px; font-weight: bold; cursor: pointer;
+    }
+
+    /* 棋盤外框滑動容器 */
+    .board-card {
+      width: 100%;
+      max-width: 100%;
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 12px;
+      overflow-x: auto;
       display: flex;
       justify-content: center;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
     }
 
     /* 棋盤本體 */
     .grid {
       display: grid;
       grid-template-columns: repeat(15, var(--cell-size));
+      grid-template-rows: repeat(15, var(--cell-size));
       gap: 1px;
       background-color: var(--grid-border);
       border: 2px solid var(--grid-border);
       border-radius: 6px;
-      touch-action: manipulation;
+      flex-shrink: 0;
     }
 
+    /* 基本格子：確保透明度與邊框穩定 */
     .cell {
       width: var(--cell-size);
       height: var(--cell-size);
-      background: #0f172a;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
       user-select: none;
-      -webkit-tap-highlight-color: transparent;
     }
 
-    .cell.empty-space { background: transparent; cursor: default; }
-    .cell.playable { background-color: #1e293b; cursor: pointer; }
-    .cell.playable:hover { filter: brightness(1.2); }
+    /* 不可站立區域 */
+    .cell.empty-space {
+      background-color: var(--bg-color);
+      visibility: hidden; /* 隱藏盲區格子，凸顯地圖形狀 */
+    }
 
-    /* 各光環層數顏色 */
-    .cell.aura-1 { background-color: #ea580c; color: #fff; }
-    .cell.aura-2 { background-color: #d97706; color: #fff; }
-    .cell.aura-3 { background-color: #ca8a04; color: #fff; }
-    .cell.aura-4 { background-color: #65a30d; color: #fff; }
-    .cell.aura-5 { background-color: #0d9488; color: #fff; }
-    .cell.aura-6 { background-color: #0284c7; color: #fff; }
-    .cell.aura-7 { background-color: #4338ca; color: #fff; }
-    .cell.aura-8 { background-color: #7d21a2; color: #fff; }
-    .cell.aura-max { background-color: #be123c; color: #fff; }
+    /* 可站立區域（重點：強制預設背景色） */
+    .cell.playable {
+      background-color: #1e293b !important;
+      border: 1px solid #334155;
+      cursor: pointer;
+    }
 
+    .cell.playable:active { opacity: 0.8; }
+
+    /* 光環疊加顏色 */
+    .cell.aura-1 { background-color: #ea580c !important; color: #fff; }
+    .cell.aura-2 { background-color: #d97706 !important; color: #fff; }
+    .cell.aura-3 { background-color: #ca8a04 !important; color: #fff; }
+    .cell.aura-4 { background-color: #65a30d !important; color: #fff; }
+    .cell.aura-5 { background-color: #0d9488 !important; color: #fff; }
+    .cell.aura-6 { background-color: #0284c7 !important; color: #fff; }
+    .cell.aura-7 { background-color: #4338ca !important; color: #fff; }
+    .cell.aura-8 { background-color: #7d21a2 !important; color: #fff; }
+    .cell.aura-max { background-color: #be123c !important; color: #fff; }
+
+    /* 角色位置 */
     .cell.player {
       background-color: #facc15 !important;
       color: #000 !important;
       box-shadow: inset 0 0 0 2px #000;
-      font-size: 12px;
       z-index: 2;
     }
 
-    /* 📱 手機微調 (螢幕寬度 < 600px 時觸發) */
     @media (max-width: 600px) {
-      :root {
-        --cell-size: 32px; /* 手機適度縮小格子 */
-      }
-      body { padding: 10px; }
-      .board-card {
-        width: 100%;
-        max-width: 100%;
-        justify-content: flex-start; /* 手機靠左，方便滑動 */
-      }
+      .board-card { justify-content: flex-start; }
     }
   </style>
 </head>
 <body>
 
 <div class="panel">
-  <div class="panel-header">
-    <h2>🎮 光環疊加模擬器</h2>
-  </div>
-  
   <div class="controls">
-    <div class="switch-container">
-      <span>顯示層數</span>
-      <label class="switch">
-        <input type="checkbox" id="toggle-numbers" checked onchange="updateRender()">
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <button class="btn-danger" onclick="clearAll()">清空全部</button>
+    <label><input type="checkbox" id="toggle-numbers" checked onchange="updateRender()"> 顯示數字</label>
+    <button class="btn-danger" onclick="clearAll()">清空重置</button>
   </div>
-
-  <div id="player-tags"></div>
 </div>
 
 <div class="board-card">
@@ -208,6 +139,7 @@
 </div>
 
 <script>
+// 15x15 地圖結構
 const MAP_LAYOUT = [
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
@@ -228,21 +160,17 @@ const MAP_LAYOUT = [
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0]
 ];
 
-const ROWS = MAP_LAYOUT.length;
-const COLS = MAP_LAYOUT[0].length;
+const ROWS = 15;
+const COLS = 15;
 
 const AURA_SHAPE = [];
 for (let r = -5; r <= 5; r++) {
   for (let c = -5; c <= 5; c++) {
-    const absR = Math.abs(r);
-    const absC = Math.abs(c);
-
+    const absR = Math.abs(r), absC = Math.abs(c);
     if ((absR === 5 && absC === 0) || (absC === 5 && absR === 0)) {
       AURA_SHAPE.push([r, c]);
-    } else if (absR <= 4 && absC <= 4) {
-      if (!(absR === 4 && absC === 4)) {
-        AURA_SHAPE.push([r, c]);
-      }
+    } else if (absR <= 4 && absC <= 4 && !(absR === 4 && absC === 4)) {
+      AURA_SHAPE.push([r, c]);
     }
   }
 }
@@ -271,17 +199,12 @@ function initBoard() {
 }
 
 function handleCellClick(r, c) {
-  const existingIdx = players.findIndex(p => p.r === r && p.c === c);
-  if (existingIdx !== -1) {
-    players.splice(existingIdx, 1);
+  const idx = players.findIndex(p => p.r === r && p.c === c);
+  if (idx !== -1) {
+    players.splice(idx, 1);
   } else {
-    players.push({ r, c, id: Date.now() });
+    players.push({ r, c });
   }
-  updateRender();
-}
-
-function removePlayer(id) {
-  players = players.filter(p => p.id !== id);
   updateRender();
 }
 
@@ -302,14 +225,11 @@ function updateRender() {
 
   players.forEach(p => {
     AURA_SHAPE.forEach(([dr, dc]) => {
-      const targetR = p.r + dr;
-      const targetC = p.c + dc;
-
-      if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
-        if (MAP_LAYOUT[targetR][targetC] === 1) {
-          const key = `${targetR}_${targetC}`;
-          auraMap[key] = (auraMap[key] || 0) + 1;
-        }
+      const tr = p.r + dr;
+      const tc = p.c + dc;
+      if (tr >= 0 && tr < ROWS && tc >= 0 && tc < COLS && MAP_LAYOUT[tr][tc] === 1) {
+        const key = `${tr}_${tc}`;
+        auraMap[key] = (auraMap[key] || 0) + 1;
       }
     });
   });
@@ -318,13 +238,9 @@ function updateRender() {
     const [r, c] = key.split('_');
     const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
     const count = auraMap[key];
-
     if (cell) {
-      const classLevel = count > 8 ? 'max' : count;
-      cell.classList.add(`aura-${classLevel}`);
-      if (showNumbers) {
-        cell.innerText = count;
-      }
+      cell.classList.add(`aura-${count > 8 ? 'max' : count}`);
+      if (showNumbers) cell.innerText = count;
     }
   });
 
@@ -334,15 +250,6 @@ function updateRender() {
       cell.classList.add('player');
       cell.innerText = `P${index + 1}`;
     }
-  });
-
-  const tagsContainer = document.getElementById('player-tags');
-  tagsContainer.innerHTML = '';
-  players.forEach((p, index) => {
-    const tag = document.createElement('div');
-    tag.className = 'player-tag';
-    tag.innerHTML = `P${index + 1} (${p.r + 1},${p.c + 1}) <span class="close" onclick="removePlayer(${p.id})">✕</span>`;
-    tagsContainer.appendChild(tag);
   });
 }
 
