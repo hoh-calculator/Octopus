@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>副本光環模擬器 Final</title>
+  <title>副本光環模擬器 Perfect Pro</title>
   <style>
     :root {
       --bg-color: #0f172a;
       --card-bg: #1e293b;
       --accent-color: #38bdf8;
       --text-main: #f8fafc;
-      --grid-border: #334155;
-      --cell-size: 36px;
+      --grid-border: #475569;
+      --cell-size: 34px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,17 +23,17 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 16px;
-      gap: 16px;
+      padding: 12px;
+      gap: 12px;
       min-height: 100vh;
     }
 
     .panel {
       width: 100%;
-      max-width: 600px;
+      max-width: 580px;
       background: var(--card-bg);
-      padding: 16px;
-      border-radius: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
     }
 
     .controls {
@@ -41,12 +41,13 @@
       justify-content: space-between;
       align-items: center;
       background: #0f172a;
-      padding: 10px 14px;
-      border-radius: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
     }
 
     .btn-danger {
-      background: #ef4444; color: white; border: none; padding: 8px 12px;
+      background: #ef4444; color: white; border: none; padding: 6px 12px;
       border-radius: 6px; font-weight: bold; cursor: pointer;
     }
 
@@ -55,14 +56,15 @@
       width: 100%;
       max-width: 100%;
       background: var(--card-bg);
-      padding: 16px;
-      border-radius: 12px;
+      padding: 12px;
+      border-radius: 10px;
       overflow-x: auto;
       display: flex;
       justify-content: center;
+      -webkit-overflow-scrolling: touch;
     }
 
-    /* 棋盤本體 */
+    /* 15x15 網格本體 */
     .grid {
       display: grid;
       grid-template-columns: repeat(15, var(--cell-size));
@@ -70,11 +72,11 @@
       gap: 1px;
       background-color: var(--grid-border);
       border: 2px solid var(--grid-border);
-      border-radius: 6px;
+      border-radius: 4px;
       flex-shrink: 0;
     }
 
-    /* 基本格子：確保透明度與邊框穩定 */
+    /* 基礎格子樣式 */
     .cell {
       width: var(--cell-size);
       height: var(--cell-size);
@@ -86,22 +88,21 @@
       user-select: none;
     }
 
-    /* 不可站立區域 */
+    /* 【不可站立盲區】：顯示為暗色斜線，維持格子形狀不消失 */
     .cell.empty-space {
-      background-color: var(--bg-color);
-      visibility: hidden; /* 隱藏盲區格子，凸顯地圖形狀 */
+      background-color: #090d16;
+      background-image: repeating-linear-gradient(45deg, #0d1322 0, #0d1322 3px, transparent 0, transparent 6px);
+      cursor: not-allowed;
     }
 
-    /* 可站立區域（重點：強制預設背景色） */
+    /* 【可站立區域】：亮色清楚標記 */
     .cell.playable {
-      background-color: #1e293b !important;
-      border: 1px solid #334155;
+      background-color: #334155;
       cursor: pointer;
     }
+    .cell.playable:active { opacity: 0.7; }
 
-    .cell.playable:active { opacity: 0.8; }
-
-    /* 光環疊加顏色 */
+    /* 光環疊加顏色 (強制覆蓋) */
     .cell.aura-1 { background-color: #ea580c !important; color: #fff; }
     .cell.aura-2 { background-color: #d97706 !important; color: #fff; }
     .cell.aura-3 { background-color: #ca8a04 !important; color: #fff; }
@@ -121,7 +122,7 @@
     }
 
     @media (max-width: 600px) {
-      .board-card { justify-content: flex-start; }
+      .board-card { justify-content: flex-start; } /* 手機靠左以便滑動 */
     }
   </style>
 </head>
@@ -129,7 +130,7 @@
 
 <div class="panel">
   <div class="controls">
-    <label><input type="checkbox" id="toggle-numbers" checked onchange="updateRender()"> 顯示數字</label>
+    <label><input type="checkbox" id="toggle-numbers" checked onchange="updateRender()"> 顯示層數數字</label>
     <button class="btn-danger" onclick="clearAll()">清空重置</button>
   </div>
 </div>
@@ -139,7 +140,7 @@
 </div>
 
 <script>
-// 15x15 地圖結構
+// 15x15 地圖結構：1 為可站立，0 為盲區
 const MAP_LAYOUT = [
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
@@ -163,6 +164,7 @@ const MAP_LAYOUT = [
 const ROWS = 15;
 const COLS = 15;
 
+// 光環範圍計算
 const AURA_SHAPE = [];
 for (let r = -5; r <= 5; r++) {
   for (let c = -5; c <= 5; c++) {
