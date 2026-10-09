@@ -2,8 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>副本光環模擬器 Perfect Pro</title>
+  <!-- 允許使用者雙指縮放 (user-scalable=yes, 放大倍率最高 5 倍) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
+  <title>副本光環模擬器 Zoom Pro</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -74,9 +75,10 @@
       border: 2px solid var(--grid-border);
       border-radius: 4px;
       flex-shrink: 0;
+      /* 移除 manipulation 限制，讓雙指手勢正常運作 */
+      touch-action: auto;
     }
 
-    /* 基礎格子樣式 */
     .cell {
       width: var(--cell-size);
       height: var(--cell-size);
@@ -88,21 +90,21 @@
       user-select: none;
     }
 
-    /* 【不可站立盲區】：顯示為暗色斜線，維持格子形狀不消失 */
+    /* 不可站立區域 */
     .cell.empty-space {
       background-color: #090d16;
       background-image: repeating-linear-gradient(45deg, #0d1322 0, #0d1322 3px, transparent 0, transparent 6px);
       cursor: not-allowed;
     }
 
-    /* 【可站立區域】：亮色清楚標記 */
+    /* 可站立區域 */
     .cell.playable {
       background-color: #334155;
       cursor: pointer;
     }
     .cell.playable:active { opacity: 0.7; }
 
-    /* 光環疊加顏色 (強制覆蓋) */
+    /* 光環顏色 */
     .cell.aura-1 { background-color: #ea580c !important; color: #fff; }
     .cell.aura-2 { background-color: #d97706 !important; color: #fff; }
     .cell.aura-3 { background-color: #ca8a04 !important; color: #fff; }
@@ -122,7 +124,7 @@
     }
 
     @media (max-width: 600px) {
-      .board-card { justify-content: flex-start; } /* 手機靠左以便滑動 */
+      .board-card { justify-content: flex-start; }
     }
   </style>
 </head>
@@ -140,7 +142,6 @@
 </div>
 
 <script>
-// 15x15 地圖結構：1 為可站立，0 為盲區
 const MAP_LAYOUT = [
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0],
@@ -164,7 +165,6 @@ const MAP_LAYOUT = [
 const ROWS = 15;
 const COLS = 15;
 
-// 光環範圍計算
 const AURA_SHAPE = [];
 for (let r = -5; r <= 5; r++) {
   for (let c = -5; c <= 5; c++) {
