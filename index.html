@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>副本光環模擬器 Mobile Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>副本光環模擬器 Ultimate</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -12,11 +12,12 @@
       --text-main: #f8fafc;
       --text-sub: #94a3b8;
       --grid-border: #334155;
-      /* 手機端格子大小，最窄適應 32px，螢幕寬會更大 */
-      --cell-size: clamp(28px, 6.2vw, 38px);
+      /* 電腦預設格子大小 */
+      --cell-size: 38px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg-color);
@@ -24,19 +25,19 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 12px;
+      padding: 20px;
       gap: 16px;
       min-height: 100vh;
     }
 
-    /* 手機上卡片滿版 */
-    .panel, .board-card {
+    /* 頂部控制面板 */
+    .panel {
       width: 100%;
-      max-width: 600px;
+      max-width: 650px;
       background: var(--card-bg);
-      padding: 16px;
+      padding: 16px 20px;
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
 
     .panel-header {
@@ -46,28 +47,25 @@
       margin-bottom: 12px;
     }
 
-    .panel h2 { font-size: 18px; color: var(--accent-color); }
+    .panel h2 { font-size: 20px; color: var(--accent-color); }
 
-    /* 控制列 */
     .controls {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
       justify-content: space-between;
       background: #0f172a;
-      padding: 10px;
+      padding: 10px 16px;
       border-radius: 8px;
     }
 
-    /* 開關 Switch */
     .switch-container {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 13px;
-      color: var(--text-main);
+      font-size: 14px;
     }
-    .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .switch { position: relative; display: inline-block; width: 42px; height: 22px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
@@ -78,25 +76,26 @@
       background-color: white; transition: .3s; border-radius: 50%;
     }
     input:checked + .slider { background-color: var(--accent-color); }
-    input:checked + .slider:before { transform: translateX(18px); }
+    input:checked + .slider:before { transform: translateX(20px); }
 
     .btn-danger {
-      background: #ef4444; color: white; border: none; padding: 8px 12px;
+      background: #ef4444; color: white; border: none; padding: 8px 14px;
       border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer;
+      transition: background 0.2s;
     }
+    .btn-danger:hover { background: #dc2626; }
 
-    /* 已選角色標籤列 */
     #player-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
+      gap: 8px;
+      margin-top: 12px;
     }
     .player-tag {
       background: #0f172a;
       border: 1px solid var(--accent-color);
       color: #fff;
-      padding: 4px 8px;
+      padding: 4px 10px;
       border-radius: 16px;
       font-size: 12px;
       display: flex;
@@ -107,14 +106,21 @@
       color: #ef4444; font-weight: bold; cursor: pointer;
     }
 
-    /* 棋盤容器 (支援 overflow 滾動防爆版) */
+    /* 外層卡片：電腦置中、手機充許滑動 */
     .board-card {
+      width: 100%;
+      max-width: fit-content;
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       display: flex;
       justify-content: center;
       overflow-x: auto;
-      padding: 12px;
+      -webkit-overflow-scrolling: touch;
     }
 
+    /* 棋盤本體 */
     .grid {
       display: grid;
       grid-template-columns: repeat(15, var(--cell-size));
@@ -122,7 +128,7 @@
       background-color: var(--grid-border);
       border: 2px solid var(--grid-border);
       border-radius: 6px;
-      touch-action: manipulation; /* 提高手機點擊響應 */
+      touch-action: manipulation;
     }
 
     .cell {
@@ -132,7 +138,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(11px, 2.8vw, 15px);
+      font-size: 14px;
       font-weight: bold;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
@@ -140,9 +146,9 @@
 
     .cell.empty-space { background: transparent; cursor: default; }
     .cell.playable { background-color: #1e293b; cursor: pointer; }
-    .cell.playable:active { opacity: 0.7; }
+    .cell.playable:hover { filter: brightness(1.2); }
 
-    /* 光環層數顏色 */
+    /* 各光環層數顏色 */
     .cell.aura-1 { background-color: #ea580c; color: #fff; }
     .cell.aura-2 { background-color: #d97706; color: #fff; }
     .cell.aura-3 { background-color: #ca8a04; color: #fff; }
@@ -157,8 +163,21 @@
       background-color: #facc15 !important;
       color: #000 !important;
       box-shadow: inset 0 0 0 2px #000;
-      font-size: clamp(10px, 2.5vw, 13px);
+      font-size: 12px;
       z-index: 2;
+    }
+
+    /* 📱 手機微調 (螢幕寬度 < 600px 時觸發) */
+    @media (max-width: 600px) {
+      :root {
+        --cell-size: 32px; /* 手機適度縮小格子 */
+      }
+      body { padding: 10px; }
+      .board-card {
+        width: 100%;
+        max-width: 100%;
+        justify-content: flex-start; /* 手機靠左，方便滑動 */
+      }
     }
   </style>
 </head>
@@ -212,7 +231,6 @@ const MAP_LAYOUT = [
 const ROWS = MAP_LAYOUT.length;
 const COLS = MAP_LAYOUT[0].length;
 
-// 9x9 扣除 4 角加 4 邊外凸 1 格
 const AURA_SHAPE = [];
 for (let r = -5; r <= 5; r++) {
   for (let c = -5; c <= 5; c++) {
@@ -318,7 +336,6 @@ function updateRender() {
     }
   });
 
-  // 更新手機簡潔版的角色標籤列
   const tagsContainer = document.getElementById('player-tags');
   tagsContainer.innerHTML = '';
   players.forEach((p, index) => {
