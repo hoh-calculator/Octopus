@@ -2,9 +2,8 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <!-- 允許使用者雙指縮放 (user-scalable=yes, 放大倍率最高 5 倍) -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
-  <title>副本光環模擬器 Zoom Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>副本光環模擬器 - 職業配置版</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -24,48 +23,92 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 12px;
-      gap: 12px;
+      padding: 10px;
+      gap: 10px;
       min-height: 100vh;
+      overflow: hidden;
     }
 
     .panel {
       width: 100%;
       max-width: 580px;
       background: var(--card-bg);
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-radius: 10px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
+
+    /* 職業選擇列 */
+    .role-selector {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+    }
+
+    .role-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
+      color: #fff;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .role-btn.active {
+      border-color: #fff;
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(255,255,255,0.3);
+    }
+
+    /* 各職業專屬顏色按鈕 */
+    .btn-tank { background-color: #2563eb; }   /* 坦克: 藍色 */
+    .btn-ranger { background-color: #16a34a; } /* 遊俠: 綠色 */
+    .btn-raven { background-color: #9333ea; }  /* 渡鴉: 紫色 */
+    .btn-support { background-color: #db2777; }/* 輔助: 粉紅 */
 
     .controls {
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: #0f172a;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
-    .btn-danger {
-      background: #ef4444; color: white; border: none; padding: 6px 12px;
-      border-radius: 6px; font-weight: bold; cursor: pointer;
+    .btn-group { display: flex; gap: 4px; }
+    .btn {
+      background: #3b82f6; color: white; border: none; padding: 4px 8px;
+      border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;
     }
+    .btn-danger { background: #ef4444; }
 
-    /* 棋盤外框滑動容器 */
-    .board-card {
+    /* 視窗容器 */
+    .viewport-container {
       width: 100%;
-      max-width: 100%;
+      height: 70vh;
       background: var(--card-bg);
-      padding: 12px;
       border-radius: 10px;
-      overflow-x: auto;
+      overflow: hidden;
+      position: relative;
+      touch-action: none;
       display: flex;
       justify-content: center;
-      -webkit-overflow-scrolling: touch;
+      align-items: center;
     }
 
-    /* 15x15 網格本體 */
+    .transform-layer {
+      transform-origin: center center;
+      transition: transform 0.05s linear;
+      will-change: transform;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(15, var(--cell-size));
@@ -74,9 +117,6 @@
       background-color: var(--grid-border);
       border: 2px solid var(--grid-border);
       border-radius: 4px;
-      flex-shrink: 0;
-      /* 移除 manipulation 限制，讓雙指手勢正常運作 */
-      touch-action: auto;
     }
 
     .cell {
@@ -85,24 +125,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: bold;
       user-select: none;
     }
 
-    /* 不可站立區域 */
     .cell.empty-space {
       background-color: #090d16;
       background-image: repeating-linear-gradient(45deg, #0d1322 0, #0d1322 3px, transparent 0, transparent 6px);
       cursor: not-allowed;
     }
 
-    /* 可站立區域 */
     .cell.playable {
       background-color: #334155;
       cursor: pointer;
     }
-    .cell.playable:active { opacity: 0.7; }
 
     /* 光環顏色 */
     .cell.aura-1 { background-color: #ea580c !important; color: #fff; }
@@ -115,30 +152,41 @@
     .cell.aura-8 { background-color: #7d21a2 !important; color: #fff; }
     .cell.aura-max { background-color: #be123c !important; color: #fff; }
 
-    /* 角色位置 */
-    .cell.player {
-      background-color: #facc15 !important;
-      color: #000 !important;
-      box-shadow: inset 0 0 0 2px #000;
-      z-index: 2;
-    }
-
-    @media (max-width: 600px) {
-      .board-card { justify-content: flex-start; }
-    }
+    /* 角色放置後的樣式 (帶職業代表色) */
+    .cell.role-tank { background-color: #2563eb !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
+    .cell.role-ranger { background-color: #16a34a !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
+    .cell.role-raven { background-color: #9333ea !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
+    .cell.role-support { background-color: #db2777 !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
   </style>
 </head>
 <body>
 
 <div class="panel">
+  <!-- 職業選擇按鈕列 -->
+  <div class="role-selector">
+    <button class="role-btn btn-tank active" onclick="selectRole('坦克', 'role-tank')">坦克</button>
+    <button class="role-btn btn-ranger" onclick="selectRole('遊俠', 'role-ranger')">遊俠</button>
+    <button class="role-btn btn-raven" onclick="selectRole('渡鴉', 'role-raven')">渡鴉</button>
+    <button class="role-btn btn-support" onclick="selectRole('輔助', 'role-support')">輔助</button>
+  </div>
+
   <div class="controls">
-    <label><input type="checkbox" id="toggle-numbers" checked onchange="updateRender()"> 顯示層數數字</label>
-    <button class="btn-danger" onclick="clearAll()">清空重置</button>
+    <label><input type="checkbox" id="toggle-numbers" checked onchange="updateRender()"> 數字</label>
+    
+    <div class="btn-group">
+      <button class="btn" onclick="zoom(0.2)">🔍+</button>
+      <button class="btn" onclick="zoom(-0.2)">🔍-</button>
+      <button class="btn" onclick="resetZoom()">↺重置</button>
+    </div>
+
+    <button class="btn btn-danger" onclick="clearAll()">清空</button>
   </div>
 </div>
 
-<div class="board-card">
-  <div id="board" class="grid"></div>
+<div class="viewport-container" id="viewport">
+  <div class="transform-layer" id="transform-layer">
+    <div id="board" class="grid"></div>
+  </div>
 </div>
 
 <script>
@@ -162,8 +210,7 @@ const MAP_LAYOUT = [
   [0,0,0,0, 1,1,1,1,1,1,1, 0,0,0,0]
 ];
 
-const ROWS = 15;
-const COLS = 15;
+const ROWS = 15, COLS = 15;
 
 const AURA_SHAPE = [];
 for (let r = -5; r <= 5; r++) {
@@ -178,6 +225,15 @@ for (let r = -5; r <= 5; r++) {
 }
 
 let players = [];
+let currentRole = '坦克';
+let currentRoleClass = 'role-tank';
+
+function selectRole(roleName, className) {
+  currentRole = roleName;
+  currentRoleClass = className;
+  document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+}
 
 function initBoard() {
   const board = document.getElementById('board');
@@ -191,7 +247,9 @@ function initBoard() {
       
       if (MAP_LAYOUT[r][c] === 1) {
         cell.className = 'cell playable';
-        cell.onclick = () => handleCellClick(r, c);
+        cell.addEventListener('pointerup', () => {
+          if (!isDragging) handleCellClick(r, c);
+        });
       } else {
         cell.className = 'cell empty-space';
       }
@@ -203,9 +261,11 @@ function initBoard() {
 function handleCellClick(r, c) {
   const idx = players.findIndex(p => p.r === r && p.c === c);
   if (idx !== -1) {
+    // 如果點到已有角色的格子，就移除它
     players.splice(idx, 1);
   } else {
-    players.push({ r, c });
+    // 在該格子放置目前選中的職業
+    players.push({ r, c, name: currentRole, cls: currentRoleClass });
   }
   updateRender();
 }
@@ -227,8 +287,7 @@ function updateRender() {
 
   players.forEach(p => {
     AURA_SHAPE.forEach(([dr, dc]) => {
-      const tr = p.r + dr;
-      const tc = p.c + dc;
+      const tr = p.r + dr, tc = p.c + dc;
       if (tr >= 0 && tr < ROWS && tc >= 0 && tc < COLS && MAP_LAYOUT[tr][tc] === 1) {
         const key = `${tr}_${tc}`;
         auraMap[key] = (auraMap[key] || 0) + 1;
@@ -246,14 +305,74 @@ function updateRender() {
     }
   });
 
-  players.forEach((p, index) => {
+  players.forEach((p) => {
     const cell = document.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
     if (cell) {
-      cell.classList.add('player');
-      cell.innerText = `P${index + 1}`;
+      cell.classList.add(p.cls);
+      cell.innerText = p.name; // 顯示：坦克、遊俠、渡鴉、輔助
     }
   });
 }
+
+// 縮放平移控制
+const viewport = document.getElementById('viewport');
+const layer = document.getElementById('transform-layer');
+
+let scale = 1;
+let pointX = 0, pointY = 0;
+let startX = 0, startY = 0;
+let isDragging = false;
+let startDist = 0;
+
+function updateTransform() {
+  layer.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+}
+
+function zoom(delta) {
+  scale = Math.min(Math.max(0.6, scale + delta), 3);
+  updateTransform();
+}
+
+function resetZoom() {
+  scale = 1; pointX = 0; pointY = 0;
+  updateTransform();
+}
+
+viewport.addEventListener('pointerdown', (e) => {
+  isDragging = false;
+  startX = e.clientX - pointX;
+  startY = e.clientY - pointY;
+});
+
+viewport.addEventListener('pointermove', (e) => {
+  if (e.buttons === 1 || e.pointerType === 'touch') {
+    const newX = e.clientX - startX;
+    const newY = e.clientY - startY;
+    if (Math.abs(newX - pointX) > 5 || Math.abs(newY - pointY) > 5) {
+      isDragging = true;
+    }
+    pointX = newX;
+    pointY = newY;
+    updateTransform();
+  }
+});
+
+viewport.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    startDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+  }
+});
+
+viewport.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    isDragging = true;
+    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    const factor = dist / startDist;
+    scale = Math.min(Math.max(0.6, scale * (factor > 1 ? 1.03 : 0.97)), 3);
+    startDist = dist;
+    updateTransform();
+  }
+});
 
 initBoard();
 </script>
