@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>副本光環模擬器 - 職業配置版</title>
+  <title>副本光環模擬器 - 僅輔助光環版</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -41,7 +41,6 @@
       gap: 8px;
     }
 
-    /* 職業選擇列 */
     .role-selector {
       display: flex;
       gap: 6px;
@@ -66,7 +65,6 @@
       box-shadow: 0 0 10px rgba(255,255,255,0.3);
     }
 
-    /* 各職業專屬顏色按鈕 */
     .btn-tank { background-color: #2563eb; }   /* 坦克: 藍色 */
     .btn-ranger { background-color: #16a34a; } /* 遊俠: 綠色 */
     .btn-raven { background-color: #9333ea; }  /* 渡鴉: 紫色 */
@@ -89,7 +87,6 @@
     }
     .btn-danger { background: #ef4444; }
 
-    /* 視窗容器 */
     .viewport-container {
       width: 100%;
       height: 70vh;
@@ -141,7 +138,7 @@
       cursor: pointer;
     }
 
-    /* 光環顏色 */
+    /* 輔助專用光環顏色 */
     .cell.aura-1 { background-color: #ea580c !important; color: #fff; }
     .cell.aura-2 { background-color: #d97706 !important; color: #fff; }
     .cell.aura-3 { background-color: #ca8a04 !important; color: #fff; }
@@ -152,7 +149,7 @@
     .cell.aura-8 { background-color: #7d21a2 !important; color: #fff; }
     .cell.aura-max { background-color: #be123c !important; color: #fff; }
 
-    /* 角色放置後的樣式 (帶職業代表色) */
+    /* 各職業面板樣式 */
     .cell.role-tank { background-color: #2563eb !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
     .cell.role-ranger { background-color: #16a34a !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
     .cell.role-raven { background-color: #9333ea !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
@@ -162,12 +159,11 @@
 <body>
 
 <div class="panel">
-  <!-- 職業選擇按鈕列 -->
   <div class="role-selector">
     <button class="role-btn btn-tank active" onclick="selectRole('坦克', 'role-tank')">坦克</button>
     <button class="role-btn btn-ranger" onclick="selectRole('遊俠', 'role-ranger')">遊俠</button>
     <button class="role-btn btn-raven" onclick="selectRole('渡鴉', 'role-raven')">渡鴉</button>
-    <button class="role-btn btn-support" onclick="selectRole('輔助', 'role-support')">輔助</button>
+    <button class="role-btn btn-support" onclick="selectRole('輔助', 'role-support')">輔助(有光環)</button>
   </div>
 
   <div class="controls">
@@ -261,11 +257,11 @@ function initBoard() {
 function handleCellClick(r, c) {
   const idx = players.findIndex(p => p.r === r && p.c === c);
   if (idx !== -1) {
-    // 如果點到已有角色的格子，就移除它
     players.splice(idx, 1);
   } else {
-    // 在該格子放置目前選中的職業
-    players.push({ r, c, name: currentRole, cls: currentRoleClass });
+    // 記錄該角色的名稱與類別，並標記是否為「輔助」
+    const isSupport = (currentRole === '輔助');
+    players.push({ r, c, name: currentRole, cls: currentRoleClass, hasAura: isSupport });
   }
   updateRender();
 }
@@ -285,14 +281,17 @@ function updateRender() {
 
   const auraMap = {};
 
+  // 核心修改：只對標記為 hasAura (即輔助) 的角色計算光環範圍
   players.forEach(p => {
-    AURA_SHAPE.forEach(([dr, dc]) => {
-      const tr = p.r + dr, tc = p.c + dc;
-      if (tr >= 0 && tr < ROWS && tc >= 0 && tc < COLS && MAP_LAYOUT[tr][tc] === 1) {
-        const key = `${tr}_${tc}`;
-        auraMap[key] = (auraMap[key] || 0) + 1;
-      }
-    });
+    if (p.hasAura) {
+      AURA_SHAPE.forEach(([dr, dc]) => {
+        const tr = p.r + dr, tc = p.c + dc;
+        if (tr >= 0 && tr < ROWS && tc >= 0 && tc < COLS && MAP_LAYOUT[tr][tc] === 1) {
+          const key = `${tr}_${tc}`;
+          auraMap[key] = (auraMap[key] || 0) + 1;
+        }
+      });
+    }
   });
 
   Object.keys(auraMap).forEach(key => {
@@ -309,7 +308,7 @@ function updateRender() {
     const cell = document.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
     if (cell) {
       cell.classList.add(p.cls);
-      cell.innerText = p.name; // 顯示：坦克、遊俠、渡鴉、輔助
+      cell.innerText = p.name;
     }
   });
 }
