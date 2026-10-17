@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>副本光環模擬器 - 僅輔助光環版</title>
+  <title>副本光環模擬器</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -11,7 +11,7 @@
       --accent-color: #38bdf8;
       --text-main: #f8fafc;
       --grid-border: #475569;
-      --cell-size: 34px;
+      --cell-size: 36px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,37 +23,45 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 10px;
-      gap: 10px;
+      padding: 8px;
+      gap: 8px;
       min-height: 100vh;
       overflow: hidden;
     }
 
     .panel {
       width: 100%;
-      max-width: 580px;
+      max-width: 600px;
       background: var(--card-bg);
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-radius: 10px;
       z-index: 10;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
-    .role-selector {
+    .section-title {
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .role-group {
       display: flex;
-      gap: 6px;
-      justify-content: space-between;
+      gap: 4px;
+      flex-wrap: wrap;
     }
 
     .role-btn {
       flex: 1;
-      padding: 8px 4px;
+      min-width: 52px;
+      padding: 6px 2px;
       border: 2px solid transparent;
       border-radius: 6px;
       font-weight: bold;
-      font-size: 13px;
+      font-size: 11px;
       cursor: pointer;
       color: #fff;
       text-align: center;
@@ -62,13 +70,24 @@
     .role-btn.active {
       border-color: #fff;
       transform: scale(1.05);
-      box-shadow: 0 0 10px rgba(255,255,255,0.3);
+      box-shadow: 0 0 8px rgba(255,255,255,0.4);
     }
 
-    .btn-tank { background-color: #2563eb; }   /* 坦克: 藍色 */
-    .btn-ranger { background-color: #16a34a; } /* 遊俠: 綠色 */
-    .btn-raven { background-color: #9333ea; }  /* 渡鴉: 紫色 */
-    .btn-support { background-color: #db2777; }/* 輔助: 粉紅 */
+    /* 無光環職業專屬底色 */
+    .btn-none-1 { background-color: #1e3a8a; } /* 聖騎 */
+    .btn-none-2 { background-color: #312e81; } /* 黑騎 */
+    .btn-none-3 { background-color: #14532d; } /* 遊俠 */
+    .btn-none-4 { background-color: #065f46; } /* 冰遊 */
+    .btn-none-5 { background-color: #0369a1; } /* 雷遊 */
+    .btn-none-6 { background-color: #581c87; } /* 渡鴉 */
+    .btn-none-7 { background-color: #7f1d1d; } /* 狂戰 */
+
+    /* 有光環職業專屬底色 */
+    .btn-aura-1 { background-color: #ea580c; } /* 骨騎 */
+    .btn-aura-2 { background-color: #db2777; } /* 牧師 */
+    .btn-aura-3 { background-color: #ca8a04; } /* 低語 */
+    .btn-aura-4 { background-color: #0d9488; } /* 冰獵 */
+    .btn-aura-5 { background-color: #9333ea; } /* 火薩 */
 
     .controls {
       display: flex;
@@ -77,19 +96,20 @@
       background: #0f172a;
       padding: 6px 10px;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
+      margin-top: 2px;
     }
 
     .btn-group { display: flex; gap: 4px; }
     .btn {
       background: #3b82f6; color: white; border: none; padding: 4px 8px;
-      border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;
+      border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;
     }
     .btn-danger { background: #ef4444; }
 
     .viewport-container {
       width: 100%;
-      height: 70vh;
+      height: 62vh;
       background: var(--card-bg);
       border-radius: 10px;
       overflow: hidden;
@@ -138,7 +158,7 @@
       cursor: pointer;
     }
 
-    /* 輔助專用光環顏色 */
+    /* 光環重疊數字顏色 */
     .cell.aura-1 { background-color: #ea580c !important; color: #fff; }
     .cell.aura-2 { background-color: #d97706 !important; color: #fff; }
     .cell.aura-3 { background-color: #ca8a04 !important; color: #fff; }
@@ -149,21 +169,39 @@
     .cell.aura-8 { background-color: #7d21a2 !important; color: #fff; }
     .cell.aura-max { background-color: #be123c !important; color: #fff; }
 
-    /* 各職業面板樣式 */
-    .cell.role-tank { background-color: #2563eb !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
-    .cell.role-ranger { background-color: #16a34a !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
-    .cell.role-raven { background-color: #9333ea !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
-    .cell.role-support { background-color: #db2777 !important; color: #fff !important; box-shadow: inset 0 0 0 2px #fff; z-index: 2; }
+    /* 已放置角色樣式：專屬底色 + 白色內框 */
+    .cell.role-placed {
+      color: #fff !important;
+      box-shadow: inset 0 0 0 2px #fff !important;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
 
 <div class="panel">
-  <div class="role-selector">
-    <button class="role-btn btn-tank active" onclick="selectRole('坦克', 'role-tank')">坦克</button>
-    <button class="role-btn btn-ranger" onclick="selectRole('遊俠', 'role-ranger')">遊俠</button>
-    <button class="role-btn btn-raven" onclick="selectRole('渡鴉', 'role-raven')">渡鴉</button>
-    <button class="role-btn btn-support" onclick="selectRole('輔助', 'role-support')">輔助(有光環)</button>
+  <div>
+    <div class="section-title">無光環職業</div>
+    <div class="role-group">
+      <button class="role-btn btn-none-1 active" onclick="selectRole('聖騎', '#1e3a8a', false)">聖騎</button>
+      <button class="role-btn btn-none-2" onclick="selectRole('黑騎', '#312e81', false)">黑騎</button>
+      <button class="role-btn btn-none-3" onclick="selectRole('遊俠', '#14532d', false)">遊俠</button>
+      <button class="role-btn btn-none-4" onclick="selectRole('冰遊', '#065f46', false)">冰遊</button>
+      <button class="role-btn btn-none-5" onclick="selectRole('雷遊', '#0369a1', false)">雷遊</button>
+      <button class="role-btn btn-none-6" onclick="selectRole('渡鴉', '#581c87', false)">渡鴉</button>
+      <button class="role-btn btn-none-7" onclick="selectRole('狂戰', '#7f1d1d', false)">狂戰</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">有光環職業</div>
+    <div class="role-group">
+      <button class="role-btn btn-aura-1" onclick="selectRole('骨騎', '#ea580c', true)">骨騎</button>
+      <button class="role-btn btn-aura-2" onclick="selectRole('牧師', '#db2777', true)">牧師</button>
+      <button class="role-btn btn-aura-3" onclick="selectRole('低語', '#ca8a04', true)">低語</button>
+      <button class="role-btn btn-aura-4" onclick="selectRole('冰獵', '#0d9488', true)">冰獵</button>
+      <button class="role-btn btn-aura-5" onclick="selectRole('火薩', '#9333ea', true)">火薩</button>
+    </div>
   </div>
 
   <div class="controls">
@@ -221,12 +259,14 @@ for (let r = -5; r <= 5; r++) {
 }
 
 let players = [];
-let currentRole = '坦克';
-let currentRoleClass = 'role-tank';
+let currentRole = '聖騎';
+let currentColor = '#1e3a8a';
+let currentHasAura = false;
 
-function selectRole(roleName, className) {
+function selectRole(roleName, color, hasAura) {
   currentRole = roleName;
-  currentRoleClass = className;
+  currentColor = color;
+  currentHasAura = hasAura;
   document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
   event.target.classList.add('active');
 }
@@ -259,9 +299,12 @@ function handleCellClick(r, c) {
   if (idx !== -1) {
     players.splice(idx, 1);
   } else {
-    // 記錄該角色的名稱與類別，並標記是否為「輔助」
-    const isSupport = (currentRole === '輔助');
-    players.push({ r, c, name: currentRole, cls: currentRoleClass, hasAura: isSupport });
+    players.push({ 
+      r, c, 
+      name: currentRole, 
+      color: currentColor, 
+      hasAura: currentHasAura 
+    });
   }
   updateRender();
 }
@@ -277,11 +320,12 @@ function updateRender() {
   document.querySelectorAll('.cell.playable').forEach(cell => {
     cell.className = 'cell playable';
     cell.innerText = '';
+    cell.style.removeProperty('background-color');
   });
 
   const auraMap = {};
 
-  // 核心修改：只對標記為 hasAura (即輔助) 的角色計算光環範圍
+  // 僅對「有光環職業」計算疊加光環範圍
   players.forEach(p => {
     if (p.hasAura) {
       AURA_SHAPE.forEach(([dr, dc]) => {
@@ -294,6 +338,7 @@ function updateRender() {
     }
   });
 
+  // 渲染光環範圍背景與數字
   Object.keys(auraMap).forEach(key => {
     const [r, c] = key.split('_');
     const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
@@ -304,16 +349,18 @@ function updateRender() {
     }
   });
 
+  // 渲染角色本身（確保底色與白色框線正確顯示）
   players.forEach((p) => {
     const cell = document.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
     if (cell) {
-      cell.classList.add(p.cls);
+      cell.className = 'cell playable role-placed';
+      cell.style.setProperty('background-color', p.color, 'important');
       cell.innerText = p.name;
     }
   });
 }
 
-// 縮放平移控制
+// 縮放與平移控制
 const viewport = document.getElementById('viewport');
 const layer = document.getElementById('transform-layer');
 
